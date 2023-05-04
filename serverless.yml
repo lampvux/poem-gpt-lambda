@@ -1,0 +1,17 @@
+service: poem-gpt
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  timeout: 30 # optional, in seconds, default is 6
+
+functions:
+  api:
+    handler: index.handler
+    events:
+      - httpApi:
+          path: /
+          method: post
+plugins:
+  - serverless-offline

@@ -1,4 +1,4 @@
-export const poemStyles = {
+const poemStyles = {
   ballad: "Ballad",
   sonnet: "Sonnet",
   ode: "Ode",
@@ -6,14 +6,16 @@ export const poemStyles = {
   clerihew: "Clerihew",
   elegy: "Elegy",
 };
+module.exports.poemStyles = poemStyles;
 
-export const poemTimes = {
+const poemTimes = {
   past: "Past",
   present: "Present",
   future: "Future",
 };
+module.exports.poemTimes = poemTimes;
 
-export const poemAuthors = {
+const poemAuthors = {
   "William Shakespeare": "William Shakespeare",
   "Walt Whitman": "Walt Whitman",
   "John Keats": "John Keats",
@@ -25,3 +27,4 @@ export const poemAuthors = {
   "Audre Lorde": "Audre Lorde",
   "Jack London": "Jack London",
 };
+module.exports.poemAuthors = poemAuthors;

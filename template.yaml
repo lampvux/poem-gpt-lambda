@@ -4,7 +4,7 @@ Resources:
   StreamingFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: /
+      CodeUri: ./
       Handler: index.streamhandler
       Runtime: nodejs18.x
       Timeout: 30

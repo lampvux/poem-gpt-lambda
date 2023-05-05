@@ -1,7 +1,7 @@
 const { Configuration, OpenAIApi } = require("openai");
 const { poemStyles, poemTimes, poemAuthors } = require("./constants");
 
-const streamingResponse = async (request) => {
+const streamingResponse = async (request, responseStream) => {
   try {
     const res = await openai.createCompletion(request, {
       responseType: "stream",
@@ -19,7 +19,7 @@ const streamingResponse = async (request) => {
         }
         try {
           const parsed = JSON.parse(message);
-          console.log(parsed.choices[0].text);
+          responseStream.write(parsed.choices[0].text);
         } catch (error) {
           console.error("Could not JSON parse stream message", message, error);
         }
@@ -44,7 +44,6 @@ const streamingResponse = async (request) => {
 };
 
 const queryCompletion = async (data) => {
-  console.log("data", data);
   const configuration = new Configuration({
     apiKey: process.env.OPENAI_API_KEY ?? data.apiKey,
   });
@@ -114,7 +113,7 @@ const queryCompletion = async (data) => {
   };
   console.log("request", request);
   if (request.stream) {
-    return streamingResponse(request);
+    return streamingResponse(request, data.responseStream);
   } else {
     const completion = await openai.createCompletion(request);
     return completion.data.choices[0].text;
@@ -182,7 +181,8 @@ module.exports.handler = async (event) => {
     };
   }
 };
-exports.streamhandler = awslambda.streamifyResponse(
+
+module.exports.streamhandler = awslambda.streamifyResponse(
   async (event, responseStream, context) => {
     const httpResponseMetadata = {
       statusCode: 200,
@@ -196,9 +196,53 @@ exports.streamhandler = awslambda.streamifyResponse(
       responseStream,
       httpResponseMetadata
     );
+    const messageResponse = {
+      message: "response from server",
+      data: {},
+    };
+    try {
+      try {
+        event.body = JSON.parse(event.body);
+      } catch (error) {
+        messageResponse.message = error.message;
+        throw new Error(error.message);
+      }
+      try {
+        const data = {
+          ...event.body,
+          prompt: fineTurnedPrompt(event.body.prompt),
+          apiKey: event.headers.api_key,
+          max_tokens: 500,
+          temperature: 0.5,
+          top_p: 1,
+          frequency_penalty: 0.5,
+          presence_penalty: 0.2,
+          responseStream: responseStream,
+        };
 
-    responseStream.write("<html>");
-
-    responseStream.end();
+        const response = await queryCompletion(data);
+        messageResponse.data = response;
+      } catch (error) {
+        if (error.response) {
+          console.log("status: ", error.response.status);
+          console.log("data: ", error.response.data);
+        } else {
+          console.log(error.message);
+        }
+        messageResponse.message = error.message;
+        throw new Error(error.message);
+      }
+      responseStream.write({
+        statusCode: 200,
+        body: JSON.stringify(messageResponse, null, 2),
+      });
+      responseStream.end();
+    } catch (error) {
+      responseStream.write({
+        statusCode: 200,
+        body: JSON.stringify(messageResponse, null, 2),
+      });
+      responseStream.end();
+    }
   }
 );
